@@ -52,6 +52,20 @@ export async function getRestaurantById(
     }
 }
 
+export async function getRestaurantVideos(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
+    try {
+        const restaurantId = String(req.params.id);
+        const videos = await restaurantService.getRestaurantVideos(restaurantId);
+        sendSuccess(res, videos);
+    } catch (err) {
+        next(err);
+    }
+}
+
 export async function updateRestaurant(
     req: Request,
     res: Response,

@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 // ─── Routers ────────────────────────────────────────────────────────────────
 import authRouter from './modules/auth/auth.routes';
 import restaurantRouter from './modules/restaurants/restaurant.routes';
+import videoRouter from './modules/videos/video.routes';
 
 const app = express();
 
@@ -52,10 +53,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 // ─── API Routes ──────────────────────────────────────────────────────────────
 app.use('/api/auth', authRouter);
 app.use('/api/restaurants', restaurantRouter);
-
-// Phase 4: videos
-// import videoRouter from './modules/videos/video.routes';
-// app.use('/api/videos', videoRouter);
+app.use('/api/videos', videoRouter);
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((_req: Request, res: Response) => {

@@ -6,6 +6,7 @@ import {
     updateRestaurant,
     deleteRestaurant,
     getMyRestaurants,
+    getRestaurantVideos,
 } from './restaurant.controller';
 import { authenticate } from '../../middleware/auth';
 
@@ -14,6 +15,7 @@ const router = Router();
 // Public routes
 router.get('/', getAllRestaurants);
 router.get('/:id', getRestaurantById);
+router.get('/:id/videos', getRestaurantVideos);
 
 // Protected routes (require JWT)
 router.post('/', authenticate, createRestaurant);

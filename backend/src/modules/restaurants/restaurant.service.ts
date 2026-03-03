@@ -5,8 +5,11 @@ export const createRestaurantSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters.').max(200),
     description: z.string().max(1000).optional(),
     address: z.string().min(5, 'Address is required.').max(500),
-    cuisine: z.string().min(2, 'Cuisine type is required.').max(100),
-    imageUrl: z.string().url('Invalid image URL.').optional(),
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
+    averagePrice: z.number().positive().optional(),
+    popularDishes: z.array(z.string().min(1)).optional().default([]),
+    bestTimeToVisit: z.string().max(200).optional(),
 });
 
 export const updateRestaurantSchema = createRestaurantSchema.partial();
@@ -19,8 +22,11 @@ const restaurantSelect = {
     name: true,
     description: true,
     address: true,
-    cuisine: true,
-    imageUrl: true,
+    latitude: true,
+    longitude: true,
+    averagePrice: true,
+    popularDishes: true,
+    bestTimeToVisit: true,
     ownerId: true,
     createdAt: true,
     updatedAt: true,
@@ -83,6 +89,22 @@ export async function getRestaurantById(id: string) {
 
     if (!restaurant) throw new Error('Restaurant not found.');
     return restaurant;
+}
+
+export async function getRestaurantVideos(restaurantId: string) {
+    return prisma.video.findMany({
+        where: { restaurantId },
+        orderBy: { createdAt: 'desc' },
+        select: {
+            id: true,
+            title: true,
+            description: true,
+            url: true,
+            thumbnailUrl: true,
+            duration: true,
+            createdAt: true,
+        },
+    });
 }
 
 export async function updateRestaurant(
