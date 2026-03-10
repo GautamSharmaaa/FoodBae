@@ -36,6 +36,7 @@ model Restaurant {
   updatedAt       DateTime @updatedAt
 
   @@index([ownerId])
+  @@index([createdAt])
 }
 
 model Video {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@hooks/useAuth';
-import { Home, Category, Plus, Profile } from 'react-native-iconly';
 import { colors } from '@constants/colors';
 
 export default function TabsLayout() {
@@ -23,31 +23,32 @@ export default function TabsLayout() {
         name="feed"
         options={{
           title: 'Feed',
-          tabBarIcon: ({ color }) => <Home set="bold" color={color} />
+          tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} />
         }}
       />
       <Tabs.Screen
         name="restaurants"
         options={{
           title: 'Restaurants',
-          tabBarIcon: ({ color }) => <Category set="bold" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="restaurant" color={color} size={size} />
+          )
         }}
       />
       <Tabs.Screen
         name="upload"
         options={{
           title: 'Upload',
-          tabBarIcon: ({ color }) => <Plus set="bold" color={color} />
+          tabBarIcon: ({ color, size }) => <Ionicons name="add-circle" color={color} size={size} />
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <Profile set="bold" color={color} />
+          tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size} />
         }}
       />
     </Tabs>
   );
 }
-

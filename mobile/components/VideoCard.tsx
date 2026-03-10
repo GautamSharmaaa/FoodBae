@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, Dimensions } from 'react-native';
-import { Video, AVPlaybackStatus } from 'expo-av';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Dimensions, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { Video as VideoType } from '@types/video';
 import { Restaurant } from '@types/restaurant';
-import { Heart, Message } from 'react-native-iconly';
 
 const { height } = Dimensions.get('window');
 
@@ -13,39 +13,93 @@ type Props = {
 };
 
 export const VideoCard: React.FC<Props> = ({ video, isActive }) => {
-  const ref = useRef<Video | null>(null);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isPausedByUser, setIsPausedByUser] = useState(false);
+  const player = useVideoPlayer(video.url, videoPlayer => {
+    videoPlayer.loop = true;
+    videoPlayer.muted = true;
+    videoPlayer.volume = 1;
+  });
 
   useEffect(() => {
-    let isMounted = true;
-    const togglePlayback = async () => {
-      const instance = ref.current;
-      if (!instance) return;
+    player.muted = isMuted;
+  }, [isMuted, player]);
 
-      const status = (await instance.getStatusAsync()) as AVPlaybackStatus;
-      if (!isMounted || !status.isLoaded) return;
+  useEffect(() => {
+    const subscription = player.addListener('mutedChange', ({ muted }) => {
+      setIsMuted(muted);
+    });
 
-      if (isActive && !status.isPlaying) {
-        await instance.playAsync();
-      } else if (!isActive && status.isPlaying) {
-        await instance.pauseAsync();
-      }
-    };
-    togglePlayback();
     return () => {
-      isMounted = false;
+      subscription.remove();
     };
-  }, [isActive]);
+  }, [player]);
+
+  useEffect(() => {
+    if (isActive && !isPausedByUser) {
+      player.play();
+    } else {
+      player.pause();
+    }
+
+    return () => {
+      player.pause();
+    };
+  }, [isActive, isPausedByUser, player]);
+
+  useEffect(() => {
+    if (!isActive && isPausedByUser) {
+      setIsPausedByUser(false);
+    }
+  }, [isActive, isPausedByUser]);
+
+  const handlePlaybackToggle = () => {
+    if (!isActive) return;
+    setIsPausedByUser(prev => !prev);
+  };
+
+  const handleAudioToggle = () => {
+    const nextMuted = !player.muted;
+    player.muted = nextMuted;
+    setIsMuted(nextMuted);
+  };
 
   return (
     <View className="flex-1 bg-black">
-      <Video
-        ref={ref}
-        source={{ uri: video.url }}
+      <VideoView
+        player={player}
         style={{ width: '100%', height }}
-        resizeMode="cover"
-        isLooping
-        shouldPlay={isActive}
+        contentFit="cover"
+        nativeControls={false}
+        allowsFullscreen={false}
+        playsInline
       />
+      <View className="absolute right-4 top-16">
+        <TouchableOpacity
+          onPress={handleAudioToggle}
+          className="rounded-full bg-black/60 p-3"
+          activeOpacity={0.85}
+        >
+          <Ionicons
+            name={isMuted ? 'volume-mute' : 'volume-high'}
+            color="white"
+            size={22}
+          />
+        </TouchableOpacity>
+      </View>
+      <View className="absolute inset-0 items-center justify-center">
+        <TouchableOpacity
+          onPress={handlePlaybackToggle}
+          className="rounded-full bg-black/55 p-4"
+          activeOpacity={0.85}
+        >
+          <Ionicons
+            name={isActive && !isPausedByUser ? 'pause' : 'play'}
+            color="white"
+            size={30}
+          />
+        </TouchableOpacity>
+      </View>
       <View className="absolute bottom-16 left-4 right-4">
         <Text className="text-white text-sm font-semibold mb-1">
           {video.restaurant?.name ?? ''}
@@ -61,11 +115,11 @@ export const VideoCard: React.FC<Props> = ({ video, isActive }) => {
 
         <View className="flex-row items-center mt-2">
           <View className="mr-4 flex-row items-center">
-            <Heart set="bold" color="white" size={24} />
+            <Ionicons name="heart" color="white" size={24} />
             <Text className="ml-1 text-white text-xs">Like</Text>
           </View>
           <View className="flex-row items-center">
-            <Message set="bold" color="white" size={24} />
+            <Ionicons name="chatbubble" color="white" size={24} />
             <Text className="ml-1 text-white text-xs">Comment</Text>
           </View>
         </View>
@@ -73,4 +127,3 @@ export const VideoCard: React.FC<Props> = ({ video, isActive }) => {
     </View>
   );
 };
-

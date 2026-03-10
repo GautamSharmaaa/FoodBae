@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { getErrorStatusAndMessage } from './utils/errors';
 
 // ─── Routers ────────────────────────────────────────────────────────────────
 import authRouter from './modules/auth/auth.routes';
@@ -61,17 +62,12 @@ app.use((_req: Request, res: Response) => {
 });
 
 // ─── Global Error Handler ─────────────────────────────────────────────────────
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(`[ERROR] ${err.message}`);
-  // Service-layer errors (e.g. duplicate email, wrong password) are plain Error
-  // instances — surface them as 400. Only truly unexpected errors become 500.
-  const statusCode = err.name === 'Error' ? 400 : 500;
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('[ERROR]', err);
+  const { statusCode, message } = getErrorStatusAndMessage(err);
   res.status(statusCode).json({
     success: false,
-    message:
-      process.env.NODE_ENV === 'production' && statusCode === 500
-        ? 'Internal server error.'
-        : err.message,
+    message,
   });
 });
 

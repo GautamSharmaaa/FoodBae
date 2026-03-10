@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../../config/prisma';
+import { AppError } from '../../utils/errors';
 
 const SALT_ROUNDS = 12;
 const JWT_EXPIRES_IN = '7d';
@@ -31,7 +32,7 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-        throw new Error('An account with this email already exists.');
+        throw new AppError('An account with this email already exists.', 409);
     }
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
@@ -50,12 +51,12 @@ export async function login(input: LoginInput): Promise<AuthResult> {
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-        throw new Error('Invalid email or password.');
+        throw new AppError('Invalid email or password.', 401);
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-        throw new Error('Invalid email or password.');
+        throw new AppError('Invalid email or password.', 401);
     }
 
     const token = generateToken(user.id, user.email);
@@ -72,7 +73,7 @@ export async function getMe(userId: string) {
     });
 
     if (!user) {
-        throw new Error('User not found.');
+        throw new AppError('User not found.', 404);
     }
 
     return user;

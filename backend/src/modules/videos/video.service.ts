@@ -2,6 +2,8 @@ import { prisma } from '../../config/prisma';
 import { cloudinary } from '../../config/cloudinary';
 import { z } from 'zod';
 import type { UploadApiResponse } from 'cloudinary';
+import { AppError } from '../../utils/errors';
+import { decodeFeedCursor, encodeFeedCursor } from '../../utils/validation';
 
 export const uploadVideoSchema = z.object({
     restaurantId: z.string().uuid('restaurantId must be a valid UUID.'),
@@ -12,22 +14,14 @@ export const uploadVideoSchema = z.object({
 export type UploadVideoInput = z.infer<typeof uploadVideoSchema>;
 
 async function uploadToCloudinary(file: Express.Multer.File): Promise<UploadApiResponse> {
-    return new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-            {
-                resource_type: 'video',
-                folder: 'foodbae/reels',
-            },
-            (error, result) => {
-                if (error || !result) {
-                    return reject(error || new Error('Failed to upload video to Cloudinary.'));
-                }
-                resolve(result);
-            }
-        );
-
-        uploadStream.end(file.buffer);
-    });
+    try {
+        return await cloudinary.uploader.upload(file.path, {
+            resource_type: 'video',
+            folder: 'foodbae/reels',
+        });
+    } catch {
+        throw new AppError('Failed to upload video.', 502);
+    }
 }
 
 export async function uploadVideo(
@@ -40,11 +34,11 @@ export async function uploadVideo(
     });
 
     if (!restaurant) {
-        throw new Error('Restaurant not found.');
+        throw new AppError('Restaurant not found.', 404);
     }
 
     if (restaurant.ownerId !== ownerId) {
-        throw new Error('You do not own this restaurant.');
+        throw new AppError('You do not own this restaurant.', 403);
     }
 
     const uploadResult = await uploadToCloudinary(file);
@@ -55,9 +49,7 @@ export async function uploadVideo(
             description: input.description ?? null,
             url: uploadResult.secure_url,
             publicId: uploadResult.public_id,
-            thumbnailUrl:
-                // @ts-expect-error Cloudinary types do not always expose thumbnail_url
-                (uploadResult.thumbnail_url as string | undefined) ?? null,
+            thumbnailUrl: uploadResult.secure_url.replace(/\.[^.]+$/, '.jpg'),
             duration: uploadResult.duration ?? null,
             restaurantId: restaurant.id,
         },
@@ -73,12 +65,24 @@ export async function uploadVideo(
 
 export async function getFeed(limit: number, cursor?: string) {
     const take = Math.min(Math.max(limit, 1), 50);
+    const decodedCursor = cursor ? decodeFeedCursor(cursor) : null;
 
     const videos = await prisma.video.findMany({
         take: take + 1,
-        skip: cursor ? 1 : 0,
-        ...(cursor ? { cursor: { id: cursor } } : {}),
-        orderBy: { createdAt: 'desc' },
+        ...(decodedCursor
+            ? {
+                  where: {
+                      OR: [
+                          { createdAt: { lt: decodedCursor.createdAt } },
+                          {
+                              createdAt: decodedCursor.createdAt,
+                              id: { lt: decodedCursor.id },
+                          },
+                      ],
+                  },
+              }
+            : {}),
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         include: {
             restaurant: {
                 select: { id: true, name: true },
@@ -89,7 +93,10 @@ export async function getFeed(limit: number, cursor?: string) {
     let nextCursor: string | null = null;
     if (videos.length > take) {
         const nextItem = videos.pop();
-        nextCursor = nextItem ? nextItem.id : null;
+        nextCursor =
+            nextItem && nextItem.createdAt
+                ? encodeFeedCursor(nextItem.createdAt, nextItem.id)
+                : null;
     }
 
     return {
@@ -101,7 +108,7 @@ export async function getFeed(limit: number, cursor?: string) {
 export async function getRestaurantVideos(restaurantId: string) {
     return prisma.video.findMany({
         where: { restaurantId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         include: {
             restaurant: {
                 select: { id: true, name: true },
@@ -109,4 +116,3 @@ export async function getRestaurantVideos(restaurantId: string) {
         },
     });
 }
-

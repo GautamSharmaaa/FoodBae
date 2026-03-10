@@ -5,6 +5,7 @@ import {
     updateRestaurantSchema,
 } from './restaurant.service';
 import { sendSuccess, sendError } from '../../utils/response';
+import { assertUuid } from '../../utils/validation';
 
 export async function createRestaurant(
     req: Request,
@@ -45,7 +46,9 @@ export async function getRestaurantById(
     next: NextFunction
 ): Promise<void> {
     try {
-        const restaurant = await restaurantService.getRestaurantById(String(req.params.id));
+        const restaurantId = String(req.params.id);
+        assertUuid(restaurantId);
+        const restaurant = await restaurantService.getRestaurantById(restaurantId);
         sendSuccess(res, restaurant);
     } catch (err) {
         next(err);
@@ -59,6 +62,7 @@ export async function getRestaurantVideos(
 ): Promise<void> {
     try {
         const restaurantId = String(req.params.id);
+        assertUuid(restaurantId);
         const videos = await restaurantService.getRestaurantVideos(restaurantId);
         sendSuccess(res, videos);
     } catch (err) {
@@ -72,6 +76,7 @@ export async function updateRestaurant(
     next: NextFunction
 ): Promise<void> {
     try {
+        assertUuid(String(req.params.id));
         const parsed = updateRestaurantSchema.safeParse(req.body);
         if (!parsed.success) {
             sendError(res, parsed.error.errors[0].message, 422);
@@ -94,6 +99,7 @@ export async function deleteRestaurant(
     next: NextFunction
 ): Promise<void> {
     try {
+        assertUuid(String(req.params.id));
         await restaurantService.deleteRestaurant(String(req.params.id), req.user!.id);
         sendSuccess(res, null, 'Restaurant deleted successfully.');
     } catch (err) {

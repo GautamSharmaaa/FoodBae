@@ -4,13 +4,32 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@components/*": ["components/*"],
-      "@services/*": ["services/*"],
-      "@hooks/*": ["hooks/*"],
-      "@types/*": ["types/*"],
-      "@constants/*": ["constants/*"]
+      "@components/*": [
+        "components/*"
+      ],
+      "@services/*": [
+        "services/*"
+      ],
+      "@hooks/*": [
+        "hooks/*"
+      ],
+      "@types/*": [
+        "types/*"
+      ],
+      "@constants/*": [
+        "constants/*"
+      ]
     }
   },
-  "include": ["app", "components", "services", "hooks", "types", "constants"]
+  "include": [
+    "app",
+    "components",
+    "services",
+    "hooks",
+    "types",
+    "constants",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "nativewind-env.d.ts"
+  ]
 }
-

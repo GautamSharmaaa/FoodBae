@@ -1,5 +1,6 @@
 import { prisma } from '../../config/prisma';
 import { z } from 'zod';
+import { AppError } from '../../utils/errors';
 
 export const createRestaurantSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters.').max(200),
@@ -48,7 +49,7 @@ export async function getAllRestaurants(page: number, limit: number) {
         prisma.restaurant.findMany({
             skip,
             take: limit,
-            orderBy: { createdAt: 'desc' },
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
             select: restaurantSelect,
         }),
         prisma.restaurant.count(),
@@ -73,7 +74,7 @@ export async function getRestaurantById(id: string) {
         select: {
             ...restaurantSelect,
             videos: {
-                orderBy: { createdAt: 'desc' },
+                orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
                 take: 10,
                 select: {
                     id: true,
@@ -87,14 +88,14 @@ export async function getRestaurantById(id: string) {
         },
     });
 
-    if (!restaurant) throw new Error('Restaurant not found.');
+    if (!restaurant) throw new AppError('Restaurant not found.', 404);
     return restaurant;
 }
 
 export async function getRestaurantVideos(restaurantId: string) {
     return prisma.video.findMany({
         where: { restaurantId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         select: {
             id: true,
             title: true,
@@ -113,8 +114,8 @@ export async function updateRestaurant(
     input: UpdateRestaurantInput
 ) {
     const existing = await prisma.restaurant.findUnique({ where: { id } });
-    if (!existing) throw new Error('Restaurant not found.');
-    if (existing.ownerId !== ownerId) throw new Error('You do not own this restaurant.');
+    if (!existing) throw new AppError('Restaurant not found.', 404);
+    if (existing.ownerId !== ownerId) throw new AppError('You do not own this restaurant.', 403);
 
     return prisma.restaurant.update({
         where: { id },
@@ -125,8 +126,8 @@ export async function updateRestaurant(
 
 export async function deleteRestaurant(id: string, ownerId: string) {
     const existing = await prisma.restaurant.findUnique({ where: { id } });
-    if (!existing) throw new Error('Restaurant not found.');
-    if (existing.ownerId !== ownerId) throw new Error('You do not own this restaurant.');
+    if (!existing) throw new AppError('Restaurant not found.', 404);
+    if (existing.ownerId !== ownerId) throw new AppError('You do not own this restaurant.', 403);
 
     await prisma.restaurant.delete({ where: { id } });
 }
@@ -134,7 +135,7 @@ export async function deleteRestaurant(id: string, ownerId: string) {
 export async function getMyRestaurants(ownerId: string) {
     return prisma.restaurant.findMany({
         where: { ownerId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         select: restaurantSelect,
     });
 }

@@ -3,9 +3,51 @@ import { View, Text, FlatList, Alert, Dimensions, Modal, TouchableOpacity } from
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { fetchRestaurantDetail } from '@services/restaurant.service';
 import { Loader } from '@components/Loader';
-import { Video } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 
 const { width } = Dimensions.get('window');
+
+const RestaurantVideoPreview: React.FC<{ uri: string }> = ({ uri }) => {
+  const player = useVideoPlayer(uri, videoPlayer => {
+    videoPlayer.loop = true;
+    videoPlayer.muted = true;
+  });
+
+  return (
+    <VideoView
+      player={player}
+      style={{ width: '100%', height: '100%' }}
+      contentFit="cover"
+      nativeControls={false}
+      allowsFullscreen={false}
+      playsInline
+    />
+  );
+};
+
+const RestaurantVideoModalPlayer: React.FC<{ uri: string }> = ({ uri }) => {
+  const player = useVideoPlayer(uri, videoPlayer => {
+    videoPlayer.loop = true;
+  });
+
+  useEffect(() => {
+    player.play();
+    return () => {
+      player.pause();
+    };
+  }, [player]);
+
+  return (
+    <VideoView
+      player={player}
+      style={{ width, height: '100%' }}
+      contentFit="cover"
+      nativeControls
+      allowsFullscreen
+      playsInline
+    />
+  );
+};
 
 export default function RestaurantDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -59,13 +101,7 @@ export default function RestaurantDetailScreen() {
             onPress={() => setSelectedVideo(item)}
             className="mr-3 w-40 h-64 rounded-2xl bg-black overflow-hidden"
           >
-            <Video
-              source={{ uri: item.url }}
-              style={{ width: '100%', height: '100%' }}
-              resizeMode="cover"
-              isMuted
-              shouldPlay={false}
-            />
+            <RestaurantVideoPreview uri={item.url} />
           </TouchableOpacity>
         )}
       />
@@ -73,13 +109,7 @@ export default function RestaurantDetailScreen() {
       <Modal visible={!!selectedVideo} animationType="slide" transparent>
         <View className="flex-1 bg-black">
           {selectedVideo && (
-            <Video
-              source={{ uri: selectedVideo.url }}
-              style={{ width, height: '100%' }}
-              resizeMode="cover"
-              shouldPlay
-              isLooping
-            />
+            <RestaurantVideoModalPlayer uri={selectedVideo.url} />
           )}
           <TouchableOpacity
             onPress={() => setSelectedVideo(null)}
@@ -92,4 +122,3 @@ export default function RestaurantDetailScreen() {
     </View>
   );
 }
-

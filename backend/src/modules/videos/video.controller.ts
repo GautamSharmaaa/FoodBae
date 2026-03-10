@@ -1,10 +1,28 @@
 import { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { sendSuccess, sendError } from '../../utils/response';
 import { uploadVideoSchema } from './video.service';
 import * as videoService from './video.service';
+import { assertUuid } from '../../utils/validation';
 
-const storage = multer.memoryStorage();
+const uploadDirectory = path.resolve(process.cwd(), 'tmp', 'uploads');
+
+const storage = multer.diskStorage({
+    destination: async (_req, _file, cb) => {
+        try {
+            await fs.mkdir(uploadDirectory, { recursive: true });
+            cb(null, uploadDirectory);
+        } catch (error) {
+            cb(error as Error, uploadDirectory);
+        }
+    },
+    filename: (_req, file, cb) => {
+        const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+        cb(null, `${Date.now()}-${safeName}`);
+    },
+});
 
 export const videoUpload = multer({
     storage,
@@ -18,6 +36,7 @@ export async function uploadVideo(
     res: Response,
     next: NextFunction
 ): Promise<void> {
+    let filePathToCleanup: string | undefined;
     try {
         const parsed = uploadVideoSchema.safeParse(req.body);
         if (!parsed.success) {
@@ -25,14 +44,18 @@ export async function uploadVideo(
             return;
         }
 
+        assertUuid(parsed.data.restaurantId);
+
         if (!req.file) {
             sendError(res, 'Video file is required.', 400);
             return;
         }
 
+        filePathToCleanup = req.file.path;
+
         // Robust content-based validation using file-type
-        const { fileTypeFromBuffer } = await import('file-type');
-        const detected = await fileTypeFromBuffer(req.file.buffer);
+        const { fileTypeFromFile } = await import('file-type');
+        const detected = await fileTypeFromFile(req.file.path);
 
         if (!detected || !['video/mp4', 'video/quicktime'].includes(detected.mime)) {
             sendError(res, 'Only MP4 and QuickTime videos are allowed.', 400);
@@ -43,6 +66,10 @@ export async function uploadVideo(
         sendSuccess(res, video, 'Video uploaded successfully.', 201);
     } catch (err) {
         next(err);
+    } finally {
+        if (filePathToCleanup) {
+            await fs.unlink(filePathToCleanup).catch(() => undefined);
+        }
     }
 }
 
@@ -59,4 +86,3 @@ export async function getFeed(req: Request, res: Response, next: NextFunction): 
         next(err);
     }
 }
-

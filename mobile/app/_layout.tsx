@@ -1,3 +1,4 @@
+import '../global.css';
 import React from 'react';
 import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '@hooks/useAuth';
@@ -26,4 +27,3 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
-

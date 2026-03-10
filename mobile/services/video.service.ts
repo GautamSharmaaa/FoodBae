@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { api } from './api';
 import type { Video } from '@types/video';
 
@@ -10,11 +11,19 @@ export const fetchFeed = async (
   limit = 10,
   cursor?: string | null
 ): Promise<FeedResponse> => {
-  const res = await api.get('/videos/feed', {
-    params: { limit, cursor: cursor ?? undefined }
-  });
-  if (!res.data?.success) throw new Error(res.data?.message ?? 'Failed to load feed');
-  return res.data.data as FeedResponse;
+  try {
+    const res = await api.get('/videos/feed', {
+      params: { limit, cursor: cursor ?? undefined }
+    });
+    if (!res.data?.success) throw new Error(res.data?.message ?? 'Failed to load feed');
+    return res.data.data as FeedResponse;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message ?? 'Unable to load videos right now.');
+    }
+
+    throw error;
+  }
 };
 
 export const uploadVideo = async (params: {
@@ -47,4 +56,3 @@ export const uploadVideo = async (params: {
   if (!res.data?.success) throw new Error(res.data?.message ?? 'Upload failed');
   return res.data.data as Video;
 };
-

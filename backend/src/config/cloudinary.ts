@@ -2,9 +2,15 @@ import { v2 as cloudinary } from 'cloudinary';
 
 const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env;
 
-if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
-    throw new Error('Cloudinary configuration is missing. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in .env.');
+export function ensureCloudinaryConfig(): void {
+    if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+        throw new Error(
+            'Cloudinary configuration is missing. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in .env.'
+        );
+    }
 }
+
+ensureCloudinaryConfig();
 
 cloudinary.config({
     cloud_name: CLOUDINARY_CLOUD_NAME,
@@ -13,4 +19,3 @@ cloudinary.config({
 });
 
 export { cloudinary };
-
